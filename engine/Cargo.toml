@@ -1,0 +1,23 @@
+[package]
+name = "escoba15-engine"
+version = "0.1.0"
+edition = "2021"
+description = "Escoba del 15 card game engine"
+
+[lib]
+name = "escoba15_engine"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+rand = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+wasm-bindgen = { version = "0.2", optional = true }
+getrandom = { version = "0.2", features = ["js"], optional = true }
+
+[features]
+default = []
+wasm = ["wasm-bindgen", "getrandom"]
+
+[dev-dependencies]

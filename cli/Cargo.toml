@@ -1,0 +1,12 @@
+[package]
+name = "escoba15-cli"
+version = "0.1.0"
+edition = "2021"
+description = "Escoba del 15 CLI game"
+
+[[bin]]
+name = "escoba15"
+path = "src/main.rs"
+
+[dependencies]
+escoba15-engine = { path = "../engine" }

@@ -1,0 +1,29 @@
+# Rust build artifacts
+/target/
+engine/target/
+cli/target/
+
+# wasm-pack build output
+engine/pkg/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+
+# Claude / tooling config (local)
+.claude/
+.claude-flow/
+.swarm/
+.mcp.json
+CLAUDE.md
