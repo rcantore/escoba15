@@ -1,111 +1,112 @@
 # Escoba del 15
 
-> **[Version en espanol](README.es.md)**
+Un motor de juego para la [Escoba del 15](https://es.wikipedia.org/wiki/Escoba_del_15), el clasico juego de cartas jugado en toda Espana y Latinoamerica. Hecho en Rust con una IA que usa simulaciones de Monte Carlo para jugar — sin reglas hardcodeadas, sin arboles de `if/else`, solo miles de partidas simuladas por jugada.
 
-A card game engine for [Escoba del 15](https://en.wikipedia.org/wiki/Escoba), the classic trick-taking game played across Spain and Latin America. Built in Rust with an AI opponent that uses Monte Carlo simulations to play — no hardcoded rules, no `if/else` trees, just thousands of simulated games per move.
+> **[English version](README.en.md)**
 
-## What is Escoba del 15?
+## Que es la Escoba del 15?
 
-Two players take turns playing cards from their hand. The goal is to capture cards from the table by finding combinations that **sum to 15** with the card you play. Clear the entire table in one capture and you score an **escoba** (sweep). At the end of each round, points are awarded for:
+Dos jugadores se turnan para jugar cartas de su mano. El objetivo es capturar cartas de la mesa encontrando combinaciones que **sumen 15** con la carta que jugas. Si limpiaste toda la mesa en una captura, eso es una **escoba**. Al final de cada ronda se suman puntos:
 
-| Category | Point |
-|----------|-------|
-| Most cards captured | 1 |
-| Most *oros* (coins) captured | 1 |
-| The 7 de Oros (*siete de velo*) | 1 |
-| Most sevens captured | 1 |
-| Each escoba (sweep) | 1 |
+| Categoria | Punto |
+|-----------|-------|
+| Mas cartas capturadas | 1 |
+| Mas oros capturados | 1 |
+| El 7 de Oros (*siete de velo*) | 1 |
+| Mas sietes capturados | 1 |
+| Cada escoba | 1 |
 
-First player to reach **15 points** across rounds wins the game.
+El primero en llegar a **15 puntos** entre rondas gana la partida.
 
-The deck is a traditional **Spanish 40-card deck**: 4 suits (Oros, Copas, Espadas, Bastos), ranks 1-7 and 10-12 (no 8 or 9).
+El mazo es la clasica **baraja espanola de 40 cartas**: 4 palos (Oros, Copas, Espadas, Bastos), numeros del 1 al 7 y del 10 al 12 (sin 8 ni 9).
 
-## Project Structure
+## Estructura del Proyecto
 
 ```
 escoba15/
-├── engine/          # Core game library (Rust)
+├── engine/          # Motor del juego (Rust)
 │   ├── src/
-│   │   ├── card.rs      # Card model (suit, rank, values)
-│   │   ├── deck.rs      # 40-card Spanish deck
-│   │   ├── player.rs    # Player state (hand, captures, escobas)
-│   │   ├── game.rs      # Game logic, combination finding, turn management
-│   │   ├── scoring.rs   # Round scoring and game-over detection
-│   │   ├── ai.rs        # MCTS-based AI opponent
-│   │   ├── lang.rs      # Multilingual support (Spanish/English)
-│   │   ├── wasm.rs      # WebAssembly bridge (optional)
-│   │   └── lib.rs       # Public API re-exports
+│   │   ├── card.rs      # Modelo de carta (palo, numero, valores)
+│   │   ├── deck.rs      # Baraja espanola de 40 cartas
+│   │   ├── player.rs    # Estado del jugador (mano, capturas, escobas)
+│   │   ├── game.rs      # Logica del juego, busqueda de combinaciones, turnos
+│   │   ├── scoring.rs   # Puntuacion por ronda y deteccion de fin de partida
+│   │   ├── ai.rs        # IA basada en MCTS
+│   │   ├── lang.rs      # Soporte multilenguaje (Espanol/Ingles)
+│   │   ├── wasm.rs      # Bridge WebAssembly (opcional)
+│   │   └── lib.rs       # API publica
 │   └── tests/
-│       └── engine_tests.rs  # 49 integration tests
-├── cli/             # Terminal interface
+│       └── engine_tests.rs  # 49 tests de integracion
+├── cli/             # Interfaz de terminal
 │   └── src/
-│       ├── main.rs      # Interactive game loop
-│       └── strings.rs   # Localized UI strings
-└── Cargo.toml       # Workspace config
+│       ├── main.rs      # Loop de juego interactivo
+│       └── strings.rs   # Textos localizados
+└── Cargo.toml       # Configuracion del workspace
 ```
 
-## How the AI Works
+## Como Funciona la IA
 
-The AI doesn't have a list of "if this card, then play that card" rules. Instead, it uses **Information Set Monte Carlo Tree Search (ISMCTS)** — a technique from game AI research designed for games with hidden information.
+La IA no tiene una lista de "si sale esta carta, juega esta otra". En su lugar, usa **Information Set Monte Carlo Tree Search (ISMCTS)** — una tecnica de investigacion en IA para juegos con informacion oculta.
 
-Here's what happens every time the AI needs to make a move:
+Esto es lo que pasa cada vez que la IA tiene que jugar:
 
-### 1. The Problem: Hidden Information
+### 1. El Problema: Informacion Oculta
 
-Escoba is an **imperfect information** game. The AI can see its own hand and the table, but it doesn't know:
-- What cards the opponent is holding
-- What order the remaining deck is in
+La escoba es un juego de **informacion imperfecta**. La IA puede ver su propia mano y la mesa, pero no sabe:
 
-This means it can't just calculate the "perfect" move like you could in chess. It has to reason under uncertainty.
+- Que cartas tiene el oponente
+- En que orden esta el mazo
 
-### 2. Determinization: Imagining Possible Worlds
+Esto significa que no puede calcular la jugada "perfecta" como en el ajedrez. Tiene que razonar con incertidumbre.
 
-For each simulation, the AI takes all the cards it **can't** see (opponent's hand + remaining deck) and **shuffles them randomly**. Then it deals them back: the right number go to the opponent's hand, the rest become the deck.
+### 2. Determinizacion: Imaginando Mundos Posibles
 
-This creates one possible version of reality — a "what if the cards were arranged like *this*?" scenario. It's called **determinization**.
+Para cada simulacion, la IA toma todas las cartas que **no puede ver** (mano del oponente + mazo restante) y las **mezcla al azar**. Despues las reparte: la cantidad correcta vuelve a la mano del oponente, el resto forma el mazo.
+
+Esto crea una version posible de la realidad — un escenario de "que pasaria si las cartas estuvieran *asi*?". Se llama **determinizacion**.
 
 ```
-What the AI knows:          What the AI imagines:
-┌─────────────────┐         ┌─────────────────┐
-│ My hand: 3,7,R  │         │ My hand: 3,7,R  │  (same)
-│ Table: 5,S      │         │ Table: 5,S      │  (same)
-│ Their hand: ???  │   →    │ Their hand: 2,6,C│  (random guess)
-│ Deck: ?????????  │         │ Deck: 1,4,A,B...│  (shuffled)
-└─────────────────┘         └─────────────────┘
+Lo que la IA sabe:            Lo que la IA imagina:
+┌─────────────────┐           ┌─────────────────┐
+│ Mi mano: 3,7,R  │           │ Mi mano: 3,7,R  │  (igual)
+│ Mesa: 5,S       │           │ Mesa: 5,S       │  (igual)
+│ Su mano: ???    │     →     │ Su mano: 2,6,C  │  (suposicion al azar)
+│ Mazo: ?????????  │           │ Mazo: 1,4,A,B...│  (mezclado)
+└─────────────────┘           └─────────────────┘
 ```
 
-### 3. Playout: Simulating to the End
+### 3. Playout: Simular Hasta el Final
 
-In each imagined world, the AI tries a specific move (say, "play the 7 to capture the table 5+3"), and then **both players play randomly** until the round ends. This is called a **random playout**. It's fast because no thinking is involved — both sides just pick legal moves at random.
+En cada mundo imaginado, la IA prueba una jugada especifica (por ejemplo, "jugar el 7 para capturar el 5+3 de la mesa"), y despues **ambos jugadores juegan al azar** hasta que termina la ronda. Esto se llama **playout aleatorio**. Es rapido porque no hay que pensar — ambos lados simplemente eligen jugadas legales al azar.
 
-### 4. Scoring: Who Won?
+### 4. Puntuacion: Quien Gano?
 
-After the playout finishes, the AI counts the score: who captured more cards? More oros? The siete de velo? Escobas? It records the result as a win, loss, or draw.
+Cuando termina el playout, la IA cuenta los puntos: quien capturo mas cartas? Mas oros? El siete de velo? Escobas? Registra el resultado como victoria, derrota o empate.
 
-### 5. Repeat Thousands of Times
+### 5. Repetir Miles de Veces
 
-The AI does this across all its possible moves. For each move, it runs many simulations, and the move with the **highest win rate** is the one it plays.
+La IA hace esto con todas sus jugadas posibles. Para cada jugada, corre muchas simulaciones, y la jugada con el **mayor porcentaje de victorias** es la que elige.
 
-The **difficulty dial** controls how many simulations run:
+La **dificultad** controla cuantas simulaciones se corren:
 
-| Difficulty | Simulations | Thinking Time |
-|-----------|-------------|---------------|
-| Easy      | 100         | Instant       |
-| Medium    | 1,000       | Fast          |
-| Hard      | 10,000      | ~1 second     |
+| Dificultad | Simulaciones | Tiempo |
+|-----------|-------------|--------|
+| Facil     | 100         | Instantaneo |
+| Medio     | 1.000       | Rapido |
+| Dificil   | 10.000      | ~1 segundo |
 
-More simulations = better statistical confidence = stronger play. The hard AI genuinely considers the strategic value of each move across thousands of random futures.
+Mas simulaciones = mejor confianza estadistica = juego mas fuerte. La IA en dificil genuinamente considera el valor estrategico de cada jugada a traves de miles de futuros aleatorios.
 
-### Why This Approach?
+### Por Que Este Enfoque?
 
-- **No hand-tuned heuristics.** The AI discovers what's good by simulating, not by someone programming "prefer oros" rules.
-- **Scales with compute.** Want a stronger AI? Just increase the simulation count.
-- **Handles uncertainty naturally.** Determinization is a proven technique for imperfect information games.
-- **It actually works.** On hard difficulty, the AI makes surprisingly strong strategic decisions — prioritizing escobas, collecting oros, and protecting key cards.
+- **Sin heuristicas manuales.** La IA descubre que es bueno simulando, no porque alguien programo "preferi los oros".
+- **Escala con computo.** Queres una IA mas fuerte? Solo aumenta la cantidad de simulaciones.
+- **Maneja la incertidumbre naturalmente.** La determinizacion es una tecnica probada para juegos de informacion imperfecta.
+- **Funciona de verdad.** En dificil, la IA toma decisiones estrategicas sorprendentemente buenas — prioriza escobas, junta oros y protege cartas clave.
 
-## Combination Finding
+## Busqueda de Combinaciones
 
-Another interesting piece: finding which table cards sum to 15 with your hand card. The engine uses **bitmask subset enumeration** — it generates all 2^n subsets of the table cards using bitwise operations and checks which ones hit the target sum. With a max of ~10 cards on the table, this is at most 1024 subsets — instant.
+Otro detalle interesante: encontrar que cartas de la mesa suman 15 con tu carta. El motor usa **enumeracion de subconjuntos por bitmask** — genera todos los 2^n subconjuntos de las cartas de la mesa usando operaciones de bits y verifica cuales dan la suma objetivo. Con un maximo de ~10 cartas en la mesa, son como mucho 1024 subconjuntos — instantaneo.
 
 ```rust
 for mask in 1..(1u32 << n) {
@@ -114,70 +115,70 @@ for mask in 1..(1u32 << n) {
         .map(|bit| table[bit].value())
         .sum();
     if hand_value + subset_sum == 15 {
-        // Found a valid capture!
+        // Encontramos una captura valida!
     }
 }
 ```
 
-## Getting Started
+## Como Empezar
 
-### Prerequisites
+### Requisitos
 
 - [Rust](https://rustup.rs/) (1.70+)
 
-### Build and Test
+### Compilar y Testear
 
 ```bash
-# Run all tests (69 tests: 20 unit + 49 integration)
+# Correr todos los tests (69 tests: 20 unitarios + 49 de integracion)
 cargo test
 
-# Build the engine
+# Compilar el motor
 cargo build --release
 
-# Play in the terminal
+# Jugar en la terminal
 cargo run --release -p escoba15-cli
 ```
 
-### Build for WebAssembly
+### Compilar para WebAssembly
 
-The engine compiles to WASM for browser-based UIs:
+El motor se compila a WASM para UIs en el navegador:
 
 ```bash
-# Install wasm-pack
+# Instalar wasm-pack
 cargo install wasm-pack
 
-# Build the WASM package
+# Compilar el paquete WASM
 cd engine
 wasm-pack build --target web --features wasm
 ```
 
-This produces a `pkg/` directory with `.wasm` + JS bindings ready to import from any web framework.
+Esto genera un directorio `pkg/` con `.wasm` + bindings de JS listos para importar desde cualquier framework web.
 
-## Using the Engine as a Library
+## Usar el Motor como Libreria
 
 ```rust
 use escoba15_engine::*;
 
-// Create a new game
+// Crear una partida nueva
 let mut game = Game::new("Alice", "Bob");
 game.deal_round();
 
-// Get valid plays for the current player
+// Obtener jugadas validas para el jugador actual
 let plays = game.valid_plays();
 
-// Play a card (capture table cards at indices 0 and 2)
+// Jugar una carta (capturar cartas de la mesa en indices 0 y 2)
 let result = game.play_card(0, Some(vec![0, 2]));
 
-// Or drop a card (no capture)
+// O tirar una carta (sin captura)
 let result = game.play_card(1, None);
 
-// Advance to next turn
+// Avanzar al siguiente turno
 game.next_turn();
 
-// Ask the AI for a move
+// Pedirle a la IA una jugada
 let ai_move = suggest_play(&game, Difficulty::Hard);
 
-// Calculate scores at round end
+// Calcular puntos al final de la ronda
 let scores = calculate_score(
     &game.players[0].captured,
     game.players[0].escobas,
@@ -185,9 +186,9 @@ let scores = calculate_score(
 );
 ```
 
-## Multilingual
+## Multilenguaje
 
-The engine supports Spanish and English natively:
+El motor soporta espanol e ingles nativamente:
 
 ```rust
 use escoba15_engine::{Card, Suit, Lang};
@@ -197,22 +198,23 @@ card.localized_name(Lang::Es); // "Rey de Oros"
 card.localized_name(Lang::En); // "King of Coins"
 ```
 
-## Test Coverage
+## Cobertura de Tests
 
-69 tests covering:
-- Card creation, values, and edge cases
-- Deck operations (shuffle, draw, empty)
-- Combination finding (empty table, no match, single match, multiple matches, three-card combos)
-- Game play (capture, drop, escoba detection, invalid moves, round dealing)
-- Scoring (cards, oros, siete de velo, sevens, escobas, totals)
-- Game-over detection (threshold, ties, highest score wins)
-- AI (valid moves, capture preference, determinization integrity, playout completion, difficulty scaling)
+69 tests cubriendo:
+
+- Creacion de cartas, valores y casos borde
+- Operaciones del mazo (mezclar, robar, vacio)
+- Busqueda de combinaciones (mesa vacia, sin match, match unico, multiples, combos de tres cartas)
+- Jugadas (captura, descarte, deteccion de escoba, jugadas invalidas, reparto de ronda)
+- Puntuacion (cartas, oros, siete de velo, sietes, escobas, totales)
+- Deteccion de fin de partida (umbral, empates, mayor puntaje gana)
+- IA (jugadas validas, preferencia de captura, integridad de determinizacion, finalizacion de playout, escalado de dificultad)
 
 ```bash
 cargo test
 # running 69 tests ... test result: ok. 69 passed
 ```
 
-## License
+## Licencia
 
 MIT
